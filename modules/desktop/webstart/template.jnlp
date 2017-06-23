@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<jnlp codebase="replaced with baseUrl"
+      href="sales-desktop.jnlp"
+      spec="6.0+">
+    <information>
+        <title>sales desktop application</title>
+        <vendor>com.company.sales</vendor>
+        <!--         <homepage href="http://www.haulmont.com"/> -->
+        <description>sales desktop application</description>
+        <description kind="short">sales desktop application</description>
+        <offline-allowed/>
+    </information>
+    <application-desc main-class="com.company.sales.desktop.App">
+        <argument>cuba.connectionUrlList=http://localhost:8080/app-core</argument>
+    </application-desc>
+    <resources>
+        <j2se href="http://java.sun.com/products/autodl/j2se"
+              java-vm-args="-Xms64m -Xmx512m"
+              version="1.7.0_7+"/>
+        <property name="com.sun.xml.namespace.QName.useCompatibleSerialVersionUID"
+                  value="1.0"/>
+        <!-- HTTP proxy settings
+        <property name="http.proxyHost" value="192.168.0.1"/>
+        <property name="http.proxyPort" value="3128"/>
+        -->
+    </resources>
+    <security>
+        <all-permissions/>
+    </security>
+</jnlp>

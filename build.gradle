@@ -1,0 +1,338 @@
+
+buildscript {
+    ext.cubaVersion = '6.5.3'
+    repositories {
+        maven {
+            url 'https://dl.bintray.com/cuba-platform/main'
+            
+        }
+        
+        
+        mavenCentral()
+        jcenter()
+        maven {
+            url 'http://maven.vaadin.com/vaadin-addons'
+        }
+    }
+    dependencies {
+        classpath "com.haulmont.gradle:cuba-plugin:$cubaVersion"
+    }
+}
+
+def globalModule = project(':app-global')
+def webThemesModule= project(':app-web-themes')
+def coreModule = project(':app-core')
+def guiModule = project(':app-gui')
+def webModule = project(':app-web')
+def desktopModule = project(':app-desktop')
+def portalModule = project(':app-portal')
+
+def servletApi = 'org.apache.tomcat:tomcat-servlet-api:8.0.26'
+
+
+apply(plugin: 'idea')
+apply(plugin: 'cuba')
+
+cuba {
+    artifact {
+        group = 'com.company.sales'
+        version = '0.1'
+        isSnapshot = true
+    }
+    tomcat {
+        dir = "$project.rootDir/build/tomcat"
+    }
+    ide {
+        copyright = '''Copyright (c) ${YEAR} ${PACKAGE_NAME}''' // Copyright Notice for IDEA project  
+        classComment ='''/**
+ * @author ${USER}
+ */'''
+    }
+}
+
+dependencies {
+    appComponent("com.haulmont.cuba:cuba-global:$cubaVersion")
+
+}
+
+def mysql = 'mysql:mysql-connector-java:5.1.38'
+
+configure([globalModule, coreModule, guiModule, webModule, desktopModule, portalModule]) {
+    apply(plugin: 'java')
+    apply(plugin: 'maven')
+    apply(plugin: 'idea')
+    apply(plugin: 'cuba')
+
+    dependencies {
+        testCompile('junit:junit:4.12')
+    }
+
+    task sourceJar(type: Jar) {
+        from file('src')
+        classifier = 'sources'
+    }
+
+    artifacts {
+        archives sourceJar
+    }
+}
+
+configure(globalModule) {
+    task enhance(type: CubaEnhancing)
+
+    
+}
+configure(webThemesModule) {
+    apply(plugin: 'java')
+    apply(plugin: 'maven')
+    apply(plugin: 'cuba')
+
+    appModuleType = 'web-themes'
+
+    buildDir = file('../build/scss-themes')
+
+    sourceSets {
+        main {
+            java {
+                srcDir '.'
+            }
+            resources {
+                srcDir '.'
+            }
+        }
+    }
+}
+
+
+configure(coreModule) {
+
+    configurations {
+        jdbc
+        dbscripts
+    }
+
+    dependencies {
+        compile(globalModule)
+        provided(servletApi)
+        jdbc(mysql)
+        testRuntime(mysql)
+
+    }
+
+    task cleanConf(description: 'Cleans up conf directory') {
+        doLast {
+            def dir = new File(cuba.tomcat.dir, '/conf/app-core')
+            if (dir.isDirectory()) {
+                ant.delete(includeemptydirs: true) {
+                    fileset(dir: dir, includes: '**/*', excludes: 'local.app.properties')
+                }
+            }
+        }
+    }
+
+    task deploy(dependsOn: [assemble, cleanConf], type: CubaDeployment) {
+        appName = 'app-core'
+        appJars('app-global', 'app-core')
+    }
+
+    task createDb(dependsOn: assembleDbScripts, description: 'Creates local database', type: CubaDbCreation) {
+        connectionParams = '?useSSL=false&allowMultiQueries=true'
+        dbms = 'mysql'
+        host = 'localhost:13306'
+        dbName = 'sales'
+        dbUser = 'root'
+        dbPassword = '123456'
+    }
+
+    task updateDb(dependsOn: assembleDbScripts, description: 'Updates local database', type: CubaDbUpdate) {
+        connectionParams = '?useSSL=false&allowMultiQueries=true'
+        dbms = 'mysql'
+        host = 'localhost:13306'
+        dbName = 'sales'
+        dbUser = 'root'
+        dbPassword = '123456'
+    }
+}
+
+configure(guiModule) {
+    dependencies {
+        compile(globalModule)
+
+    }
+
+    task deployConf(type: Copy) {
+        from file('src')
+        include "com/company/sales/**"
+        into "$cuba.tomcat.dir/conf/app"
+    }
+}
+
+configure(webModule) {
+    configurations {
+        webcontent
+    }
+
+    dependencies {
+        provided(servletApi)
+        compile(guiModule)
+
+    }
+    
+    task webArchive(type: Zip) {
+        from file("$buildDir/web")
+        from file('web')
+        classifier = 'web'
+    }
+
+    artifacts {
+        archives webArchive
+    }
+
+    task deployConf(type: Copy) {
+        from file('src')
+        include "com/company/sales/**"
+        into "$cuba.tomcat.dir/conf/app"
+    }
+
+    task clearMessagesCache(type: CubaClearMessagesCache) {
+        appName = 'app'
+    }
+    deployConf.dependsOn clearMessagesCache
+
+    task cleanConf(description: 'Cleans up conf directory') {
+        doLast {
+            def dir = new File(cuba.tomcat.dir, '/conf/app')
+            if (dir.isDirectory()) {
+                ant.delete(includeemptydirs: true) {
+                    fileset(dir: dir, includes: '**/*', excludes: 'local.app.properties')
+                }
+            }
+        }
+    }
+
+    task deploy(dependsOn: [assemble, cleanConf], type: CubaDeployment) {
+        appName = 'app'
+        appJars('app-global', 'app-gui', 'app-web')
+    }
+    task buildScssThemes(type: CubaWebScssThemeCreation)
+    task deployThemes(type: CubaDeployThemeTask, dependsOn: buildScssThemes)
+    assemble.dependsOn buildScssThemes
+}
+
+
+configure(desktopModule) {
+    apply(plugin: 'application')
+    mainClassName = 'com.company.sales.desktop.App'
+
+    dependencies {
+        compile(guiModule)
+        
+    }
+    assemble.dependsOn = [ classes ]
+
+    jar {
+        manifest {
+            attributes("Permissions": "all-permissions")
+        }
+    }
+
+    installDist {
+        into("${projectDir}/../../deploy/" + applicationName)
+    }
+
+    task deploy(dependsOn: installDist)
+
+    task createWebStart(dependsOn: [assemble, jar], type: CubaWebStartCreation) {
+        signJarsKeystore = "${projectDir}/webstart/sign-jars-keystore.jks"
+        signJarsAlias = 'signJars'
+        signJarsPassword = 'HaulmontSignJars'
+        indexFileName = "${projectDir}/webstart/index.html"
+        basePath = 'app-webstart'
+    }
+
+    task deployWebStart(dependsOn: createWebStart, type: CubaWebStartDeployment) {
+        basePath = 'app-webstart'
+    }
+}
+
+
+configure(portalModule) {
+    dependencies {
+        provided(servletApi)
+        compile(globalModule)
+        
+    }
+
+    def webappName = 'app-portal'
+    def resourcesDir = "$cuba.tomcat.dir/webapps/$webappName/resources"
+    def ftlDir = "$cuba.tomcat.dir/webapps/$webappName/WEB-INF/templates"
+
+    task deploy(dependsOn: assemble, type: CubaDeployment) {
+        appName = webappName
+        appJars('app-global', 'app-portal')
+    }
+
+    task deployStatic() {
+        doLast {
+            copy {
+                from file('web/resources')
+                include '**/*.css'
+                include '**/*.js'
+                include '**/*.png'
+                include '**/*.gif'
+                include '**/*.jpg'
+                into resourcesDir
+            }
+            copy {
+                from file('web/WEB-INF/templates')
+                include '**/*.ftl'
+                into ftlDir
+            }
+        }
+    }
+
+    task cleanStatic() {
+        doLast {
+            delete resourcesDir
+            delete ftlDir
+        }
+    }
+
+    task webArchive(type: Zip) {
+        from file('web')
+        from file("$buildDir/web")
+        exclude '**/web.xml', '**/app.properties'
+        classifier = 'web'
+    }
+
+    artifacts {
+        archives webArchive
+    }
+}
+
+
+
+task undeploy(type: Delete, dependsOn: ':app-web:cleanConf') {
+    delete("$cuba.tomcat.dir/shared")
+    delete("$cuba.tomcat.dir/webapps/app-core")
+    delete("$cuba.tomcat.dir/webapps/app")
+    delete("$cuba.tomcat.dir/webapps/app-webstart")
+    delete("$cuba.tomcat.dir/webapps/app-portal")
+}
+
+task restart(dependsOn: ['stop', ':app-core:deploy', ':app-web:deploy', ':app-portal:deploy'], description: 'Redeploys applications and restarts local Tomcat') {
+    doLast {
+        ant.waitfor(maxwait: 6, maxwaitunit: 'second', checkevery: 2, checkeveryunit: 'second') {
+            not {
+                socket(server: 'localhost', port: '8787')
+            }
+        }
+        start.execute()
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '3.1'
+}
+
+
