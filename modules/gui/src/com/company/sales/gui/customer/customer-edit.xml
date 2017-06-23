@@ -23,7 +23,7 @@
     <dsContext>
         <datasource id="customerDs"
                     class="com.company.sales.entity.Customer"
-                    view="_local"/>
+                    view="customer-view"/>
         <collectionDatasource id="ordersDs"
                               class="com.company.sales.entity.Order"
                               view="_local">
