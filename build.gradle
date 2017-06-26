@@ -55,7 +55,7 @@ dependencies {
 
 }
 
-def mysql = 'mysql:mysql-connector-java:5.1.38'
+def hsql = 'org.hsqldb:hsqldb:2.2.9'
 
 configure([globalModule, coreModule, guiModule, webModule, desktopModule, portalModule]) {
     apply(plugin: 'java')
@@ -114,8 +114,8 @@ configure(coreModule) {
     dependencies {
         compile(globalModule)
         provided(servletApi)
-        jdbc(mysql)
-        testRuntime(mysql)
+        jdbc(hsql)
+        testRuntime(hsql)
 
     }
 
@@ -136,21 +136,19 @@ configure(coreModule) {
     }
 
     task createDb(dependsOn: assembleDbScripts, description: 'Creates local database', type: CubaDbCreation) {
-        connectionParams = '?useSSL=false&allowMultiQueries=true'
-        dbms = 'mysql'
-        host = 'localhost:13306'
+        dbms = 'hsql'
+        host = 'localhost'
         dbName = 'sales'
-        dbUser = 'root'
-        dbPassword = '123456'
+        dbUser = 'sa'
+        dbPassword = ''
     }
 
     task updateDb(dependsOn: assembleDbScripts, description: 'Updates local database', type: CubaDbUpdate) {
-        connectionParams = '?useSSL=false&allowMultiQueries=true'
-        dbms = 'mysql'
-        host = 'localhost:13306'
+        dbms = 'hsql'
+        host = 'localhost'
         dbName = 'sales'
-        dbUser = 'root'
-        dbPassword = '123456'
+        dbUser = 'sa'
+        dbPassword = ''
     }
 }
 

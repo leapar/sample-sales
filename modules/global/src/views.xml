@@ -50,4 +50,12 @@
             <property name="size"/>
         </property>
     </view>
+    <view class="com.company.sales.entity.ExtUser"
+          extends="user.edit"
+          name="user.edit">
+        <property name="imei"/>
+    </view>
+    <view class="com.company.sales.entity.ExtUser"
+          extends="user.browse"
+          name="user.browse"/>
 </views>

@@ -22,5 +22,6 @@
         <class>com.company.sales.entity.Order</class>
         <class>com.company.sales.entity.Product</class>
         <class>com.company.sales.entity.OrderLine</class>
+        <class>com.company.sales.entity.ExtUser</class>
     </persistence-unit>
 </persistence>
